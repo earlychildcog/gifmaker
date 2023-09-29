@@ -16,6 +16,7 @@ class App:
         self.slider_brightness_value = 0
         self.slider_contrast_value = 1
         self.slider_fps_value = 30
+        self.slider_skipframes_value = 0
         # main window
         root.title("Image to GIF converter")
         root.geometry('1600x1000')
@@ -72,6 +73,17 @@ class App:
         self.slider_fps.set(self.slider_fps_value)
         self.slider_fps.pack()
 
+        # sliders: skip frames
+        self.title_slider_skipframes = Label(self.setting_frame, text="Adjust skip frames")
+        self.title_slider_skipframes.pack()
+        self.slider_skipframes = Scale(self.setting_frame, from_=0, to=10, resolution=1, orient='horizontal', length=500, command=self.update_skipframes)
+        self.slider_skipframes.set(self.slider_skipframes_value)
+        self.slider_skipframes.pack()
+
+        # skip frames every
+    def update_skipframes(self, value):
+        self.slider_skipframes_value = int(value)
+
     def update_brightness(self, value):
         self.slider_brightness_value = int(value) / 100  # remember to divide back by 10
         if self.path_thumbnail_original is not None:
@@ -86,7 +98,8 @@ class App:
 
     def load_img(self, path):
         
-        cmd_thumbnail = 'ffmpeg -y -i {}  -i palette.png -filter_complex "scale=720:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=16[p];[s1][p]paletteuse,eq=brightness={}:contrast={}" -frames:v 1 {}'.format(path,self.slider_brightness_value,self.slider_contrast_value,self.path_thumbnail)
+        cmd_thumbnail = 'ffmpeg -y -i {}  -i palette.png -filter_complex "scale=720:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse,eq=brightness={}:contrast={}" -frames:v 1 {}'.format(path,self.slider_brightness_value,self.slider_contrast_value,self.path_thumbnail)
+        
         print(cmd_thumbnail)
         try:
             subprocess.run(cmd_thumbnail, shell=True, check=True)
@@ -129,9 +142,17 @@ class App:
             messagebox.showerror("Error", "No folder selected.")
             return
         gif_path = '{}/{}.gif'.format(self.output_dir, self.listbox.get(ACTIVE))
-        cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -i palette.png -filter_complex "scale=720:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=16[p];[s1][p]paletteuse,eq=brightness={}:contrast={}" {}'.format(self.slider_fps_value, self.folder_path, self.slider_brightness_value, self.slider_contrast_value, gif_path)
+        fix_ = 0
+        if self.slider_skipframes_value == 1:
+            fix_ = 1
+
+       # cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -i palette.png -filter_complex "scale=720:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse,eq=brightness={}:contrast={}" {}'.format(self.slider_fps_value, self.folder_path, self.slider_brightness_value, self.slider_contrast_value, gif_path)
+       # cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -i palette.png -filter_complex "select=\'mod(n,{})\',scale=720:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=256[p];[s1][p]paletteuse,eq=brightness={}:contrast={}" {}'.format(self.slider_fps_value, self.folder_path, self.slider_skipframes_value, self.slider_brightness_value, self.slider_contrast_value, gif_path)
+       # cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -vf "select=\'mod(n,{})\',scale=720:-1:flags=lanczos,eq=brightness={}:contrast={},format=gray,palettegen=max_colors=128" -c:v gif {}'.format(self.slider_fps_value, self.folder_path, self.slider_skipframes_value, self.slider_brightness_value, self.slider_contrast_value, gif_path)
+        cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -vf "select=\'mod(n,{})\',scale=720:-1:flags=lanczos,eq=brightness={}:contrast={}" -c:v gif {}'.format(self.slider_fps_value, self.folder_path, self.slider_skipframes_value+fix_, self.slider_brightness_value, self.slider_contrast_value, gif_path)
         try:
             subprocess.run(cmd, shell=True, check=True)
+            print("gif done\n")
         except subprocess.CalledProcessError as e:
             messagebox.showerror("Error", str(e))
 
