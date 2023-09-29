@@ -98,8 +98,30 @@ class App:
         self.slider_fps_value = int(value)
 
     def load_img(self, path):
-        
-        cmd_thumbnail = 'ffmpeg -y -i {}  -i palette.png -filter_complex "scale=720:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse,eq=brightness={}:contrast={}" -frames:v 1 {}'.format(path,self.slider_brightness_value,self.slider_contrast_value,self.path_thumbnail)
+
+        # have to rewrite this better
+        __image__ = Image.open(self.path_thumbnail)
+        try:
+            for orientation in ExifTags.TAGS.keys():
+                if ExifTags.TAGS[orientation] == 'Orientation':
+                    break
+            exif = dict(__image__._getexif().items())
+            if exif[orientation] == 3:
+                __image__ = __image__.rotate(180, expand=True)
+            elif exif[orientation] == 6:
+                __image__ = __image__.rotate(270, expand=True)
+            elif exif[orientation] == 8:
+                __image__ = __image__.rotate(90, expand=True)
+        except (AttributeError, KeyError, IndexError):
+            # cases: image don't have getexif
+            pass
+        if __image__.width > __image__.height:
+            scale_thumbnail = '720:-1'
+        else:
+            scale_thumbnail = '-1:720'
+        # cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -vf "select=\'not(mod(n,{}))\',scale={}:flags=lanczos,eq=brightness={}:contrast={}" -c:v gif {}'.format(self.slider_fps_value, self.folder_path, self.slider_selectframes_value, scale_gif, self.slider_brightness_value, self.slider_contrast_value, gif_path)
+        # cmd_thumbnail = 'ffmpeg -y -i {}  -i palette.png -filter_complex "scale={}:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse,eq=brightness={}:contrast={}" -frames:v 1 {}'.format(path, scale_gif, self.slider_brightness_value, self.slider_contrast_value, self.path_thumbnail)
+        cmd_thumbnail = 'ffmpeg -y -i {} -filter_complex "scale={}:flags=lanczos,eq=brightness={}:contrast={}" -frames:v 1 {}'.format(path, scale_thumbnail, self.slider_brightness_value, self.slider_contrast_value, self.path_thumbnail)
         
         print(cmd_thumbnail)
         try:
@@ -113,20 +135,21 @@ class App:
                 if ExifTags.TAGS[orientation] == 'Orientation':
                     break
             exif = dict(image._getexif().items())
-
             if exif[orientation] == 3:
                 image = image.rotate(180, expand=True)
             elif exif[orientation] == 6:
                 image = image.rotate(270, expand=True)
             elif exif[orientation] == 8:
                 image = image.rotate(90, expand=True)
-
         except (AttributeError, KeyError, IndexError):
             # cases: image don't have getexif
             pass
-        width = 500
+        width = int(min([image.width,720])*0.75)
+        print(width)
         height = int((width / image.width) * image.height)
+        print(height)
         image = image.resize((width, height), Image.Resampling.LANCZOS)     # rescale image
+        print(image.width)
         self.image_data = image
         self.img = ImageTk.PhotoImage(image)
         self.canvas.create_image(20, 20, anchor=NW, image=self.img)
