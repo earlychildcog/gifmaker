@@ -17,7 +17,7 @@ class App:
         self.slider_brightness_value = 0
         self.slider_contrast_value = 1
         self.slider_fps_value = 30
-        self.slider_skipframes_value = 0
+        self.slider_selectframes_value = 1
         # main window
         root.title("Image to GIF converter")
         root.geometry('1600x1000')
@@ -63,7 +63,7 @@ class App:
         # sliders: contrast
         self.title_slider_contrast = Label(self.setting_frame, text="Adjust Contrast")
         self.title_slider_contrast.pack()
-        self.slider_contrast = Scale(self.setting_frame, from_=-5, to=6, resolution=0.01, orient='horizontal', length=500, command=self.update_contrast)
+        self.slider_contrast = Scale(self.setting_frame, from_=-1, to=6, resolution=0.01, orient='horizontal', length=500, command=self.update_contrast)
         self.slider_contrast.set(self.slider_contrast_value)
         self.slider_contrast.pack()
 
@@ -74,16 +74,16 @@ class App:
         self.slider_fps.set(self.slider_fps_value)
         self.slider_fps.pack()
 
-        # sliders: skip frames
-        self.title_slider_skipframes = Label(self.setting_frame, text="Adjust skip frames")
-        self.title_slider_skipframes.pack()
-        self.slider_skipframes = Scale(self.setting_frame, from_=0, to=10, resolution=1, orient='horizontal', length=500, command=self.update_skipframes)
-        self.slider_skipframes.set(self.slider_skipframes_value)
-        self.slider_skipframes.pack()
+        # sliders: select frames
+        self.title_slider_selectframes = Label(self.setting_frame, text="Select every X frames")
+        self.title_slider_selectframes.pack()
+        self.slider_selectframes = Scale(self.setting_frame, from_=1, to=10, resolution=1, orient='horizontal', length=500, command=self.update_selectframes)
+        self.slider_selectframes.set(self.slider_selectframes_value)
+        self.slider_selectframes.pack()
 
-        # skip frames every
-    def update_skipframes(self, value):
-        self.slider_skipframes_value = int(value)
+        # select frames every
+    def update_selectframes(self, value):
+        self.slider_selectframes_value = int(value)
 
     def update_brightness(self, value):
         self.slider_brightness_value = int(value) / 100  # remember to divide back by 10
@@ -147,18 +147,18 @@ class App:
             messagebox.showerror("Error", "No folder selected.")
             return
         gif_path = '{}/{}.gif'.format(self.output_dir, self.listbox.get(ACTIVE))
-        fix_ = 0
-        if self.slider_skipframes_value == 1:
-            fix_ = 1
 
        # cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -i palette.png -filter_complex "scale=720:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse,eq=brightness={}:contrast={}" {}'.format(self.slider_fps_value, self.folder_path, self.slider_brightness_value, self.slider_contrast_value, gif_path)
-       # cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -i palette.png -filter_complex "select=\'mod(n,{})\',scale=720:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=256[p];[s1][p]paletteuse,eq=brightness={}:contrast={}" {}'.format(self.slider_fps_value, self.folder_path, self.slider_skipframes_value, self.slider_brightness_value, self.slider_contrast_value, gif_path)
-       # cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -vf "select=\'mod(n,{})\',scale=720:-1:flags=lanczos,eq=brightness={}:contrast={},format=gray,palettegen=max_colors=128" -c:v gif {}'.format(self.slider_fps_value, self.folder_path, self.slider_skipframes_value, self.slider_brightness_value, self.slider_contrast_value, gif_path)
-        # cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -vf "select=\'mod(n,{})\',scale=720:-1:flags=lanczos,eq=brightness={}:contrast={}" -c:v gif {}'.format(self.slider_fps_value, self.folder_path, self.slider_skipframes_value+fix_, self.slider_brightness_value, self.slider_contrast_value, gif_path)
+       # cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -i palette.png -filter_complex "select=\'mod(n,{})\',scale=720:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=256[p];[s1][p]paletteuse,eq=brightness={}:contrast={}" {}'.format(self.slider_fps_value, self.folder_path, self.slider_selectframes_value, self.slider_brightness_value, self.slider_contrast_value, gif_path)
+       # cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -vf "select=\'mod(n,{})\',scale=720:-1:flags=lanczos,eq=brightness={}:contrast={},format=gray,palettegen=max_colors=128" -c:v gif {}'.format(self.slider_fps_value, self.folder_path, self.slider_selectframes_value, self.slider_brightness_value, self.slider_contrast_value, gif_path)
+        # cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -vf "select=\'mod(n,{})\',scale=720:-1:flags=lanczos,eq=brightness={}:contrast={}" -c:v gif {}'.format(self.slider_fps_value, self.folder_path, self.slider_selectframes_value+fix_, self.slider_brightness_value, self.slider_contrast_value, gif_path)
+
+        # make sure we scale down the longest dimension to 720p
         if self.image_data.width > self.image_data.height:
-            cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -vf "select=\'mod(n,{})\',scale=720:-1:flags=lanczos,eq=brightness={}:contrast={}" -c:v gif {}'.format(self.slider_fps_value, self.folder_path, self.slider_skipframes_value+fix_, self.slider_brightness_value, self.slider_contrast_value, gif_path)
+            scale_gif = '720:-1'
         else:
-            cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -vf "select=\'mod(n,{})\',scale=-1:720:flags=lanczos,eq=brightness={}:contrast={}" -c:v gif {}'.format(self.slider_fps_value, self.folder_path, self.slider_skipframes_value+fix_, self.slider_brightness_value, self.slider_contrast_value, gif_path)
+            scale_gif = '-1:720'
+        cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -vf "select=\'not(mod(n,{}))\',scale={}:flags=lanczos,eq=brightness={}:contrast={}" -c:v gif {}'.format(self.slider_fps_value, self.folder_path, self.slider_selectframes_value, scale_gif, self.slider_brightness_value, self.slider_contrast_value, gif_path)
 
         try:
             subprocess.run(cmd, shell=True, check=True)
