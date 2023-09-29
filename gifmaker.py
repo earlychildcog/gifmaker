@@ -10,6 +10,7 @@ class App:
         self.output_dir = 'gifs'
         self.folder_path = None
         self.img = None
+        self.image_data = None
         self.path_thumbnail = 'images/thumbnail.jpg'
         self.path_thumbnail_original = None
         # ffmpeg parameters
@@ -106,6 +107,7 @@ class App:
         except subprocess.CalledProcessError as e:
             messagebox.showerror("Error", str(e))
         image = Image.open(self.path_thumbnail)
+        
         try:
             for orientation in ExifTags.TAGS.keys():
                 if ExifTags.TAGS[orientation] == 'Orientation':
@@ -122,7 +124,10 @@ class App:
         except (AttributeError, KeyError, IndexError):
             # cases: image don't have getexif
             pass
-        image = image.resize((500, 500), Image.Resampling.LANCZOS)  # rescale imagee
+        width = 500
+        height = int((width / image.width) * image.height)
+        image = image.resize((width, height), Image.Resampling.LANCZOS)     # rescale image
+        self.image_data = image
         self.img = ImageTk.PhotoImage(image)
         self.canvas.create_image(20, 20, anchor=NW, image=self.img)
 
@@ -149,7 +154,12 @@ class App:
        # cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -i palette.png -filter_complex "scale=720:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse,eq=brightness={}:contrast={}" {}'.format(self.slider_fps_value, self.folder_path, self.slider_brightness_value, self.slider_contrast_value, gif_path)
        # cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -i palette.png -filter_complex "select=\'mod(n,{})\',scale=720:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=256[p];[s1][p]paletteuse,eq=brightness={}:contrast={}" {}'.format(self.slider_fps_value, self.folder_path, self.slider_skipframes_value, self.slider_brightness_value, self.slider_contrast_value, gif_path)
        # cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -vf "select=\'mod(n,{})\',scale=720:-1:flags=lanczos,eq=brightness={}:contrast={},format=gray,palettegen=max_colors=128" -c:v gif {}'.format(self.slider_fps_value, self.folder_path, self.slider_skipframes_value, self.slider_brightness_value, self.slider_contrast_value, gif_path)
-        cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -vf "select=\'mod(n,{})\',scale=720:-1:flags=lanczos,eq=brightness={}:contrast={}" -c:v gif {}'.format(self.slider_fps_value, self.folder_path, self.slider_skipframes_value+fix_, self.slider_brightness_value, self.slider_contrast_value, gif_path)
+        # cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -vf "select=\'mod(n,{})\',scale=720:-1:flags=lanczos,eq=brightness={}:contrast={}" -c:v gif {}'.format(self.slider_fps_value, self.folder_path, self.slider_skipframes_value+fix_, self.slider_brightness_value, self.slider_contrast_value, gif_path)
+        if self.image_data.width > self.image_data.height:
+            cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -vf "select=\'mod(n,{})\',scale=720:-1:flags=lanczos,eq=brightness={}:contrast={}" -c:v gif {}'.format(self.slider_fps_value, self.folder_path, self.slider_skipframes_value+fix_, self.slider_brightness_value, self.slider_contrast_value, gif_path)
+        else:
+            cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -vf "select=\'mod(n,{})\',scale=-1:720:flags=lanczos,eq=brightness={}:contrast={}" -c:v gif {}'.format(self.slider_fps_value, self.folder_path, self.slider_skipframes_value+fix_, self.slider_brightness_value, self.slider_contrast_value, gif_path)
+
         try:
             subprocess.run(cmd, shell=True, check=True)
             print("gif done\n")
