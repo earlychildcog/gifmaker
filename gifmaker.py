@@ -14,7 +14,8 @@ class App:
         self.path_thumbnail_original = None
         # ffmpeg parameters
         self.slider_brightness_value = 0
-        self.slider_fps_value = 20
+        self.slider_contrast_value = 1
+        self.slider_fps_value = 30
         # main window
         root.title("Image to GIF converter")
         root.geometry('1600x1000')
@@ -57,6 +58,12 @@ class App:
         self.title_slider_brightness.pack()
         self.slider_brightness = Scale(self.setting_frame, from_=-100, to=100, resolution=1, orient='horizontal', length=500, command=self.update_brightness)
         self.slider_brightness.pack()
+        # sliders: contrast
+        self.title_slider_contrast = Label(self.setting_frame, text="Adjust Contrast")
+        self.title_slider_contrast.pack()
+        self.slider_contrast = Scale(self.setting_frame, from_=-5, to=6, resolution=0.01, orient='horizontal', length=500, command=self.update_contrast)
+        self.slider_contrast.set(self.slider_contrast_value)
+        self.slider_contrast.pack()
 
         # sliders: fps
         self.title_slider_fps = Label(self.setting_frame, text="Adjust FPS")
@@ -69,14 +76,18 @@ class App:
         self.slider_brightness_value = int(value) / 100  # remember to divide back by 10
         if self.path_thumbnail_original is not None:
             self.load_img(self.path_thumbnail_original)
+    def update_contrast(self, value):
+        self.slider_contrast_value = value
+        if self.path_thumbnail_original is not None:
+            self.load_img(self.path_thumbnail_original)
 
     def update_fps(self, value):
         self.slider_fps_value = int(value)
-        print('fps at {}'.format(int(value)))
 
     def load_img(self, path):
         
-        cmd_thumbnail = 'ffmpeg -y -i {}  -i palette.png -filter_complex "scale=720:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=16[p];[s1][p]paletteuse,eq=brightness={}" -frames:v 1 {}'.format(path,self.slider_brightness_value,self.path_thumbnail)
+        cmd_thumbnail = 'ffmpeg -y -i {}  -i palette.png -filter_complex "scale=720:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=16[p];[s1][p]paletteuse,eq=brightness={}:contrast={}" -frames:v 1 {}'.format(path,self.slider_brightness_value,self.slider_contrast_value,self.path_thumbnail)
+        print(cmd_thumbnail)
         try:
             subprocess.run(cmd_thumbnail, shell=True, check=True)
         except subprocess.CalledProcessError as e:
@@ -111,13 +122,14 @@ class App:
         else:
             self.path_thumbnail_original = os.path.join(self.folder_path, jpg_files[0])
             self.load_img(self.path_thumbnail_original)
+        self.create_gif
 
     def create_gif(self):
         if self.folder_path is None:
             messagebox.showerror("Error", "No folder selected.")
             return
         gif_path = '{}/{}.gif'.format(self.output_dir, self.listbox.get(ACTIVE))
-        cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -i palette.png -filter_complex "scale=720:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=16[p];[s1][p]paletteuse,eq=brightness={}" {}'.format(self.slider_fps_value, self.folder_path, self.slider_brightness_value, gif_path)
+        cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -i palette.png -filter_complex "scale=720:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=16[p];[s1][p]paletteuse,eq=brightness={}:contrast={}" {}'.format(self.slider_fps_value, self.folder_path, self.slider_brightness_value, self.slider_contrast_value, gif_path)
         try:
             subprocess.run(cmd, shell=True, check=True)
         except subprocess.CalledProcessError as e:
@@ -138,7 +150,6 @@ class App:
             if hasattr(self, 'gif_update_id'):
                 root.after_cancel(self.gif_update_id)
             self.update_gif()
-            print(len(self.gif_frames))
 
     def update_gif(self):
 
