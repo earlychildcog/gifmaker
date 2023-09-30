@@ -181,7 +181,8 @@ class App:
             scale_gif = '720:-1'
         else:
             scale_gif = '-1:720'
-        cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -vf "select=\'not(mod(n,{}))\',scale={}:flags=lanczos,eq=brightness={}:contrast={}" -c:v gif {}'.format(self.slider_fps_value, self.folder_path, self.slider_selectframes_value, scale_gif, self.slider_brightness_value, self.slider_contrast_value, gif_path)
+        # cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -vf "select=\'not(mod(n,{}))\',scale={}:flags=lanczos,eq=brightness={}:contrast={}" -c:v gif {}'.format(self.slider_fps_value, self.folder_path, self.slider_selectframes_value, scale_gif, self.slider_brightness_value, self.slider_contrast_value, gif_path)
+        cmd = 'ffmpeg -y -framerate {} -pattern_type glob -i "{}/*.jpg" -vf "select=\'not(mod(n,{}))\',scale={}:flags=lanczos,eq=brightness={}:contrast={},format=gray" -c:v gif {}'.format(self.slider_fps_value, self.folder_path, self.slider_selectframes_value, scale_gif, self.slider_brightness_value, self.slider_contrast_value, gif_path)
 
         try:
             subprocess.run(cmd, shell=True, check=True)
